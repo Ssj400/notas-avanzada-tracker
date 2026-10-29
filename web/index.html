@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https://docs.google.com https://*.googleusercontent.com; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="Una vista local y de solo lectura de la planilla pública de notas de IIC2233. Sin contraseñas, analítica ni ponderaciones inventadas.">
+  <meta name="theme-color" content="#0e1726">
+  <title>IIC2233 · Notas en perspectiva</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Perfil y herramientas locales">
+      <a class="brand" href="./" aria-label="IIC2233, inicio">
+        <span class="brand-mark" aria-hidden="true">{ }</span>
+        <span><strong>IIC2233</strong><span class="brand-subtitle">PROGRAMACIÓN AVANZADA</span></span>
+      </a>
+
+      <section class="identity-panel" aria-labelledby="identity-label">
+        <h2 class="eyebrow" id="identity-label">TU ESPACIO</h2>
+        <p class="identity-name" id="profile-name">Vista general</p>
+        <p class="muted mono" id="profile-id">Sin perfil seleccionado</p>
+        <div class="profile-actions">
+          <button id="change-profile" type="button">Elegir usuario</button>
+          <button id="my-position" type="button" class="button-subtle" disabled>Ver mi posición <span aria-hidden="true">↗</span></button>
+        </div>
+        <p class="small muted">Perfil local, no una cuenta. Cualquier ID puede consultar la misma planilla pública.</p>
+      </section>
+
+      <section class="local-tools" aria-labelledby="aliases-heading">
+        <h2 class="eyebrow" id="aliases-heading">NOMBRES LOCALES</h2>
+        <p class="small muted">Edita un nombre desde su fila. Solo cambia en este navegador, nunca en la planilla.</p>
+        <div class="tool-actions">
+          <button id="import-aliases" type="button">Importar JSON</button>
+          <button id="export-aliases" type="button">Exportar JSON</button>
+        </div>
+        <input type="file" id="aliases-file" accept=".json,application/json" hidden>
+        <p class="small muted">Solo alias · máximo 1 MB / 2000 IDs. La importación combina nombres y reemplaza los IDs coincidentes.</p>
+      </section>
+
+      <footer class="sidebar-footer">
+        <a id="source-link" class="source-link" target="_blank" rel="noopener noreferrer">Abrir planilla fuente <span aria-hidden="true">↗</span></a>
+        <p class="small muted">Solo lectura · datos públicos<br>Sin servidor propio ni analítica.</p>
+        <details class="privacy-details">
+          <summary>Qué se guarda aquí</summary>
+          <p class="small muted">Este navegador recuerda el último ID, tus alias, la actualización automática y una copia de las notas públicas. No se envían a un servidor nuestro. Consultar actualizaciones conecta directamente con Google. No guardes nombres que no quieras conservar en un equipo compartido.</p>
+        </details>
+      </footer>
+    </aside>
+
+    <main id="main" tabindex="-1">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">PANORAMA DEL CURSO <span class="term-label">/ NOTAS PÚBLICAS</span></p>
+          <h1>Tus notas,<br><span>en perspectiva.</span></h1>
+          <p class="header-description">La misma planilla. Una vista más clara.</p>
+        </div>
+        <div class="refresh-controls">
+          <span id="connection-status" class="status-badge" role="status">Preparando consulta</span>
+          <button id="refresh" type="button" class="button-primary"><span aria-hidden="true">↻</span> Actualizar</button>
+          <label class="checkbox-label"><input id="auto-refresh" type="checkbox" checked> Cada 5 minutos</label>
+        </div>
+      </header>
+
+      <section class="sync-panel" aria-label="Estado de los datos">
+        <p id="fetched-at">Última consulta: todavía no realizada.</p>
+        <p id="changed-at" class="muted">Último cambio detectado: sin información.</p>
+        <p class="small muted">Las horas son de consulta y detección local, no de edición de Google Sheets.</p>
+      </section>
+
+      <div id="network-message" class="notice notice-error" role="alert" hidden></div>
+      <div id="storage-message" class="notice notice-warning" role="status" hidden></div>
+      <div id="action-message" class="notice notice-info" role="status" hidden></div>
+      <div class="notice notice-info methodology">
+        <span class="notice-symbol" aria-hidden="true">i</span>
+        <p><strong>Una fotografía, no una predicción.</strong> Totales <strong>provisionales</strong> tal como se publican; no inferimos ponderaciones ni aprobación. Las actividades son <strong>puntos, no notas</strong>. Los vacíos no participan del ranking.</p>
+      </div>
+      <details id="source-warnings" class="source-warnings" hidden>
+        <summary id="warnings-summary">Observaciones de la planilla</summary>
+        <ul id="warnings-list"></ul>
+      </details>
+
+      <section class="personal-section" aria-labelledby="personal-heading">
+        <div class="section-heading">
+          <h2 id="personal-heading">Tu panorama</h2>
+          <span class="small muted" id="personal-caption">Elige un perfil para ver tus posiciones.</span>
+        </div>
+        <div class="metric-cards" id="metric-cards"></div>
+        <p id="profile-message" class="small muted">Seleccionar un perfil no requiere contraseña ni verifica identidad.</p>
+      </section>
+
+      <section class="ranking-section" aria-labelledby="ranking-heading" aria-busy="false" id="ranking-section">
+        <div class="section-heading ranking-title">
+          <div><p class="eyebrow">EL CURSO, EN NÚMEROS</p><h2 id="ranking-heading">Ranking del curso</h2></div>
+          <p id="ranking-count" class="count-pill" role="status">Esperando datos</p>
+        </div>
+        <div class="ranking-controls">
+          <label>Categoría<select id="metric-select" disabled><option>Esperando datos…</option></select></label>
+          <label>Buscar nombre o ID<input id="search" type="search" placeholder="Nombre o ID…" autocomplete="off" maxlength="100" disabled></label>
+          <label>Mostrar<select id="limit-select"><option value="10">Top 10</option><option value="25" selected>Top 25</option><option value="50">Top 50</option><option value="all">Todos</option></select></label>
+        </div>
+        <p id="metric-description" class="metric-description">Consultando la planilla pública…</p>
+        <p class="small muted" id="ranking-rules">Mayor a menor · posiciones 1, 2, 2, 4 · Top incluye todos los empates en el límite · búsqueda sin alterar posiciones.</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Tabla de posiciones, desplazable horizontalmente" aria-describedby="ranking-rules">
+          <table id="ranking-table">
+            <caption class="sr-only" id="table-caption">Ranking del curso. Orden descendente por la categoría elegida.</caption>
+            <thead><tr>
+              <th scope="col">Pos.</th><th scope="col">Estudiante</th><th scope="col">ID</th>
+              <th scope="col" id="value-heading" aria-sort="descending">Valor</th>
+              <th scope="col">Final <span class="column-note">provisional</span></th>
+              <th scope="col">Cátedra <span class="column-note">provisional</span></th>
+              <th scope="col">Actividades <span class="column-note">puntos</span></th>
+              <th scope="col">Δ valor <span class="column-note">último cambio</span></th>
+              <th scope="col"><span class="sr-only">Editar nombre local</span></th>
+            </tr></thead>
+            <tbody id="ranking-body"><tr><td colspan="9" class="empty-state">Cargando la planilla pública…</td></tr></tbody>
+          </table>
+        </div>
+        <p class="small muted" id="delta-description">Δ es la diferencia respecto de la consulta anterior al último cambio detectado. Sin una comparación previa se muestra —.</p>
+      </section>
+      <footer class="main-footer"><span>IIC2233 / NOTAS EN PERSPECTIVA</span><span>No es una plataforma oficial del curso.</span></footer>
+      <noscript><p class="notice notice-error">Esta vista necesita JavaScript para consultar la planilla. No hay autenticación ni contraseña.</p></noscript>
+    </main>
+  </div>
+
+  <dialog id="profile-dialog" aria-labelledby="profile-dialog-title" aria-describedby="profile-dialog-description">
+    <form id="profile-form" novalidate>
+      <p class="eyebrow">TU ESPACIO, EN ESTE NAVEGADOR</p>
+      <h2 id="profile-dialog-title">Elige tu perfil</h2>
+      <p class="dialog-description" id="profile-dialog-description">Ingresa tu ID para destacar tus notas. <strong>No es autenticación:</strong> no hay contraseña y la planilla es pública. No verificamos tu identidad.</p>
+      <label for="student-id">ID de estudiante</label>
+      <input id="student-id" type="text" inputmode="text" autocomplete="off" spellcheck="false" minlength="5" maxlength="20" aria-describedby="id-help profile-error" required autofocus>
+      <p id="id-help" class="small muted">Entre 5 y 20 letras o números. Si tu ID no está en la planilla, verás «sin dato». Se recuerda el último ID, pero debes elegir perfil en cada apertura.</p>
+      <p class="field-error" id="profile-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="cancel-profile" type="button">Ver sin perfil</button><button class="button-primary" type="submit">Entrar al panorama <span aria-hidden="true">↗</span></button></div>
+      <p class="small muted">Las notas se consultan en segundo plano mientras eliges.</p>
+    </form>
+  </dialog>
+
+  <dialog id="alias-dialog" aria-labelledby="alias-dialog-title" aria-describedby="alias-dialog-description">
+    <form id="alias-form" novalidate>
+      <p class="eyebrow">SOLO EN ESTE NAVEGADOR</p>
+      <h2 id="alias-dialog-title">Editar nombre local</h2>
+      <p id="alias-dialog-description" class="dialog-description">No modifica la planilla ni el perfil de otras personas.</p>
+      <p id="alias-student-id" class="mono muted"></p>
+      <label for="alias-name">Nombre para mostrar</label>
+      <input id="alias-name" type="text" maxlength="80" autocomplete="off" aria-describedby="alias-help alias-error" autofocus>
+      <p id="alias-help" class="small muted">Hasta 80 caracteres, sin caracteres de control. Déjalo vacío para restaurar el ID (o el nombre predeterminado de José Garrillo, solo para el ID 26663279).</p>
+      <p class="field-error" id="alias-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="cancel-alias" type="button">Cancelar</button><button class="button-primary" type="submit">Guardar nombre</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

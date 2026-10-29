@@ -1,0 +1,8 @@
+{
+  "name": "notas-avanzada-tracker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test web/core.test.mjs"
+  }
+}

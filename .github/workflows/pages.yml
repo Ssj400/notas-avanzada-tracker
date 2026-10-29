@@ -1,0 +1,70 @@
+name: Test and deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '24'
+      - name: Install desktop dependency
+        run: python -m pip install -r requirements.txt
+      - name: Test desktop and data rules
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest -v
+      - name: Test browser data rules
+        run: npm test
+      - name: Check browser syntax
+        run: |
+          node --check web/app.js
+          node --check web/core.js
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v6.0.0
+      - name: Assemble static site
+        run: |
+          mkdir -p _site
+          cp web/index.html web/style.css web/app.js web/core.js web/.nojekyll _site/
+      - name: Upload static site only
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v5.0.1

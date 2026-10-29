@@ -1,8 +1,30 @@
-# Notas · IIC2233 — PyQt6
+# Notas Avanzada Tracker · IIC2233
 
-Aplicación de escritorio para la [planilla pública de calificaciones](https://docs.google.com/spreadsheets/d/1xOywnk0h-9JFxPDQKpZmB0jL-rQOKxdeBnGg3V4KBEA/edit?gid=579970152). **No necesita navegador ni servidor web; nunca modifica Google Sheets.**
+Versiones **web y PyQt6** para consultar la [planilla pública de calificaciones](https://docs.google.com/spreadsheets/d/1xOywnk0h-9JFxPDQKpZmB0jL-rQOKxdeBnGg3V4KBEA/edit?gid=579970152), explorar rankings y destacar tu posición. Herramienta personal, no una plataforma oficial del curso. **Nunca modifica Google Sheets.**
 
-## Iniciar
+## Web — GitHub Pages
+
+**https://ssj400.github.io/notas-avanzada-tracker/**
+
+Sin instalación, contraseña, backend, claves de Google ni dependencias JavaScript. El navegador descarga directamente el CSV público de Google; **no se copia la planilla al repositorio ni se incluye una descarga de notas en el sitio publicado**. Cada visita consulta la fuente, con actualización manual o cada cinco minutos mientras la pestaña esté abierta.
+
+- En cada apertura eliges tu número de alumno; se precarga el último usado. Puedes **Cambiar usuario** durante el uso o mirar el ranking sin perfil. Esto no autentica ni verifica identidad.
+- Nombres personalizados, perfil, preferencia de actualización y última copia de notas viven en `localStorage` del navegador, bajo el prefijo `notas-avanzada-tracker:v1:`. Si no se puede guardar, se advierte y se continúa en memoria.
+- La copia local se marca **desactualizada** al abrir o si falla una consulta; no se ocultan los fallos detrás de datos aparentemente recientes.
+- Puedes importar/exportar solo nombres en JSON. El formato es compatible con PyQt6, pero **no hay sincronización automática** entre aplicaciones, navegadores o dispositivos.
+- Si Google cambia la estructura, revoca el acceso público o deja de permitir la lectura desde el navegador, se muestra un error. No se utilizan proxies de terceros para sortearlo.
+
+Para probar la web localmente:
+
+```bash
+python3 -m http.server 8000 --bind 127.0.0.1 --directory web
+```
+
+Abre `http://127.0.0.1:8000/`. No abras `index.html` como `file://`: los módulos JavaScript necesitan HTTP. Los datos del navegador local no se trasladan automáticamente a la dirección de GitHub Pages.
+
+## Escritorio — PyQt6
+
+La versión nativa no necesita navegador ni servidor web.
 
 Python **3.10 o superior** y PyQt6. Si tu Python ya tiene PyQt6, basta con:
 
@@ -53,12 +75,22 @@ python3 desktop.py --data-dir /ruta/a/mis-datos
 - `tracker.py`: descarga HTTP con `urllib`, caché JSON y detección de cambios.
 - `rankings.py`: funciones puras para ranking, empates y validación de nombres.
 - `test_*.py`: pruebas independientes de la fuente real.
+- `web/index.html`, `web/style.css`, `web/app.js`: interfaz web estática y perfiles locales.
+- `web/core.js`: lectura CSV, validación y rankings equivalentes a Python, sin dependencias.
+- `web/core.test.mjs`: pruebas Node nativas, sin acceso a la fuente real.
+- `.github/workflows/pages.yml`: prueba ambas versiones y despliega **solo `web/`** en GitHub Pages.
 
-Sin frameworks web, analítica ni servicios adicionales. La única dependencia externa de Python es **PyQt6**.
+Sin frameworks web, analítica ni servicios adicionales. La única dependencia externa de Python es **PyQt6**. La web no requiere instalar Python ni Node para usarla.
+
+## Publicación
+
+El repositorio es [Ssj400/notas-avanzada-tracker](https://github.com/Ssj400/notas-avanzada-tracker). Los pushes a `main` ejecutan pruebas Python/Qt y JavaScript antes de publicar en Pages. Los pull requests ejecutan pruebas sin desplegar. También se puede lanzar el workflow manualmente desde **Actions**.
+
+GitHub Pages debe usar **GitHub Actions** como origen de publicación. El código web usa rutas relativas y funciona bajo `/notas-avanzada-tracker/`. El despliegue no publica `.data/`, entornos virtuales ni archivos de configuración local.
 
 ## Datos locales y privacidad
 
-Los nombres y la copia de notas se guardan **solo en tu equipo**, en `.data/` (o `--data-dir`), no en Google. No se sincronizan entre dispositivos. Exporta los nombres para trasladarlos; borrar `aliases.json` elimina las personalizaciones, y borrar `grades.json` elimina la copia de notas. El nombre inicial de José vuelve a aparecer por defecto.
+En **PyQt6**, los nombres y la copia de notas se guardan solo en tu equipo, en `.data/` (o `--data-dir`), no en Google. En la **web**, se guardan solo en el navegador. No se sincronizan entre dispositivos. Exporta los nombres para trasladarlos; en escritorio, borrar `aliases.json` elimina las personalizaciones, y borrar `grades.json` elimina la copia de notas. El nombre inicial de José vuelve a aparecer por defecto.
 
 `profile.json` guarda únicamente el último número seleccionado. Cambiar de perfil no cambia ni borra los nombres, que siempre están asociados al número de cada alumno. No se almacenan contraseñas ni se crea una sesión de Google.
 
@@ -68,6 +100,8 @@ La carpeta de datos está ignorada por Git y los archivos se guardan con permiso
 
 ```bash
 QT_QPA_PLATFORM=offscreen python3 -m unittest -v
+npm test
+node --check web/app.js
 ```
 
-Las pruebas usan datos ficticios: CSV, comas decimales, encabezados multilínea, pendientes, ceros, empates, nombres inválidos, caché incompatible, cambios y fallos de conexión. `offscreen` permite probar PyQt6 sin abrir ventanas.
+Las pruebas usan datos de prueba: CSV, comas decimales, encabezados multilínea, pendientes, ceros, empates, nombres inválidos, perfiles, caché incompatible, cambios y fallos de conexión. `offscreen` permite probar PyQt6 sin abrir ventanas. Para las pruebas web se necesita Node 18 o superior; no hace falta `npm install`.
