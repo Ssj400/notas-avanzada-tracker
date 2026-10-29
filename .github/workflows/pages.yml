@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   test-and-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7.0.1
@@ -30,6 +30,10 @@ jobs:
           node-version: '24'
       - name: Install desktop dependency
         run: python -m pip install -r requirements.txt
+      - name: Install Qt runtime libraries for headless tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libopengl0 libxkbcommon0 libfontconfig1 libdbus-1-3
       - name: Test desktop and data rules
         env:
           QT_QPA_PLATFORM: offscreen
@@ -56,7 +60,7 @@ jobs:
   deploy:
     if: github.event_name != 'pull_request'
     needs: test-and-build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       pages: write
